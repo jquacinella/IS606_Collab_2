@@ -80,3 +80,43 @@ sim_demand = ddply(.data=stock, 1, .fun=function(x) {
   )
 })
 head(sim_demand)
+
+
+
+
+### -- James addition, part 4
+
+part4 <- raw2[raw2$Date != '2014-04-08' & raw2$Date != '2014-04-21', ]
+oneDay <- 0;
+twoDays <- 0;
+for (i in 1:nrow(part4)) {
+  if (part4[i,]$InTransit != 0) {
+    if (part4[i,]$InTransit == part4[i+1,]$InTransit) { 
+      twoDays <- twoDays + 1;
+    } 
+    else { 
+      oneDay <- oneDay + 1;
+    }
+  }
+}
+
+# 217 one day InTransit; 77 two day InTransit
+oneDay
+TwoDays
+
+# Note, however, that out of those 77, some of them are two seperate shipments while some of them
+# are one shipment taking two days. I do not see a clear way of differentiating these situations
+#
+#part4[3121:3123,]
+#Date Center Store         Product InTransit AtCenter OnOrder InStock          StoreProduct Demand
+#3712 2014-04-09    103 11575 102307200032368        15        0       0       5 11575 102307200032368      0
+#3713 2014-04-10    103 11575 102307200032368        15        0       0       5 11575 102307200032368     15
+#3714 2014-04-11    103 11575 102307200032368         0        0      29      20 11575 102307200032368      0
+#
+#part4[2599:2602,]
+#Date Center Store         Product InTransit AtCenter OnOrder InStock          StoreProduct Demand
+#3060 2014-04-15    103 11407 102307200030160         0        6       0       7 11407 102307200030160      2
+#3061 2014-04-16    103 11407 102307200030160         6        6       0       7 11407 102307200030160      0
+#3062 2014-04-17    103 11407 102307200030160         6        0       0      11 11407 102307200030160      2
+#3063 2014-04-18    103 11407 102307200030160         0        0       0      15 11407 102307200030160      2
+
