@@ -83,6 +83,27 @@ head(sim_demand)
 
 
 
+# This function will simulate a weekly demand and check if the demand is met by product in stock.
+weekly_demand = function(lambda, stock){
+  demand_met = 0
+  if (stock >= sum(rpois(7, lambda)))
+    demand_met = 1
+  demand_met
+}
+
+# this block simulates the weekly demand 100 times and computes the probability of meeting the demand.
+# 100 can be relplaced with N.
+sim_demand = ddply(.data=stock, 1, .fun=function(x) { 
+  sim_result = sum(replicate(100, weekly_demand(x$meanDemand, x$InStock)))/100
+  data.frame(
+    x,
+    Sim = sim_result
+  )
+})
+head(sim_demand)
+
+
+
 
 ### -- James addition, part 4
 
