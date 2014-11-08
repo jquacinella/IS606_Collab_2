@@ -120,3 +120,6 @@ firstDayResults[with(firstDayResults, order(-P1)), ]
 # Probability Second Day
 secondDayResults <- result[result$P2 > 0, c('StoreProduct', 'P2')]
 secondDayResults[with(secondDayResults, order(-P2)), ]
+
+# Print total results sorted by P1
+print(result[with(result, order(-P1)), c('StoreProduct', 'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7')], row.names = FALSE)
