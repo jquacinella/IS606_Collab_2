@@ -29,9 +29,9 @@ for (i in 2:nrow(raw2)) {
     ifelse(raw2[i-1,]$StoreProduct == raw2[i,]$StoreProduct,
            raw2[i-1,]$InStock # previous day stock
          + ifelse(            # plus shipment received on current day
-           raw2[i-1,]$InTransit > 0,
-           (raw2[i-1,]$InTransit - raw2[i,]$InTransit + raw2[i-1,]$AtCenter),
-           0)
+             raw2[i-1,]$InTransit > 0,
+             (raw2[i-1,]$InTransit - raw2[i,]$InTransit + raw2[i-1,]$AtCenter),
+             0)
          - raw2[i,]$InStock   # minus current day stock
          ,NA)
 }
@@ -86,10 +86,10 @@ daily_demand = function(lambda, stock){
 }
 
 # test stub
-sim_result = replicate(10, daily_demand(1, 3))
-sim_result
-rowSums(sim_result)
-rowSums(sim_result)/10
+#sim_result = replicate(10, daily_demand(1, 3))
+#sim_result
+#rowSums(sim_result)
+#rowSums(sim_result)/10
 
 # This block simulates the weekly demand N times and computes the probability of meeting the demand
 # for each day.
@@ -114,6 +114,9 @@ result = ddply(.data=stock, 1, .fun=function(x) {
 head(result)
 
 # Probability First Day
-result[result$P1 > 0,]
+firstDayResults <- result[result$P1 > 0, c('StoreProduct', 'P1')]
+firstDayResults[with(firstDayResults, order(-P1)), ]
+
 # Probability Second Day
-result[result$P2 > 0,]
+secondDayResults <- result[result$P2 > 0, c('StoreProduct', 'P2')]
+secondDayResults[with(secondDayResults, order(-P2)), ]
