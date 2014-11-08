@@ -1,5 +1,8 @@
 #IS606 Group Assignment 2
 
+#setwd("C:/Users/sgurung/Documents/GitHub/IS606_Collab_2")
+setwd("~/Code/Masters/IS606/Collab2")
+
 raw <- read.csv("group-project-2-raw-data.csv")
 raw$Store <- as.factor(as.character(raw$Store))
 raw$Product <- as.factor(as.character(raw$Product))
@@ -20,10 +23,19 @@ raw2 <- subset(raw, !(StoreProduct %in% negStock))
 #calculate demand as InStock(n-1) - Instock(n) + InTransit(n-1)
 raw2$Demand <- numeric(nrow(raw2))
 raw2[1,]$Demand <- NA
+raw2$OnOrder <- NULL
 for (i in 2:nrow(raw2)) {
-  raw2[i,]$Demand <- ifelse(raw2[i-1,]$StoreProduct == raw2[i,]$StoreProduct, 
-                       raw2[i-1,]$InStock - raw2[i,]$InStock + raw2[i-1,]$InTransit, NA)
+  raw2[i,]$Demand <- 
+    ifelse(raw2[i-1,]$StoreProduct == raw2[i,]$StoreProduct,
+           raw2[i-1,]$InStock # previous day stock
+         + ifelse(            # plus shipment received on current day
+           raw2[i-1,]$InTransit > 0,
+           (raw2[i-1,]$InTransit - raw2[i,]$InTransit + raw2[i-1,]$AtCenter),
+           0)
+         - raw2[i,]$InStock   # minus current day stock
+         ,NA)
 }
+head(raw2,100)
 
 #remove negative demand (could be illogical or need to capture center straight to store [i.e. no InTransit])
 #49/265 store-product combos removed (686 rows)
@@ -43,101 +55,65 @@ write.csv(md, "meanDemand.csv")
 
 #------------------------
 
-#add poisson distribution variable (not working yet)
-md$poisson <- numeric(nrow(md))
-for (i in nrow(md)) {
-  md[i,]$poisson <- ppois(1:7, lambda=md[i,]$meanDemand)[1]
-}
+head(raw3)
 
-
-
+# Grab the last row of each store to get the most recent InStock number
 stock = ddply(.data=raw3, c("raw3$StoreProduct"), .fun=function(x) { 
   data.frame(
-    x[nrow(x), c('InTransit','InStock')]
+    x[nrow(x), c('Date','InStock')]
   )
 })
-
 head(stock)
 head(md)
 
+# Combine with computed lambda values for further analysis
 stock = cbind(stock, md)
-stock = stock[, c('StoreProduct', 'InTransit','InStock','meanDemand')]
+stock = stock[, c('StoreProduct', 'InStock','meanDemand')]
 head(stock)
 
-sim_demand = ddply(.data=stock, 1, .fun=function(x) { 
-  d = rpois(7, x$meanDemand)
-  data.frame(
-    x,
-    D1=d[1],
-    D2=d[2],
-    D3=d[3],
-    D4=d[4],
-    D5=d[5],
-    D6=d[6],
-    D7=d[7],
-    
-    Total = sum(d)
-  )
-})
-head(sim_demand)
 
+#
+# New Code Follows
+#
 
-
-# This function will simulate a weekly demand and check if the demand is met by product in stock.
-weekly_demand = function(lambda, stock){
-  demand_met = 0
-  if (stock >= sum(rpois(7, lambda)))
-    demand_met = 1
-  demand_met
+# This function will simulate a weekly demand and check if the demand is met by product in stock
+# for each day of the week.
+# Returns: a vector of length 7 (week) that contains 0 if demand was met and 1 otherwise.
+#
+daily_demand = function(lambda, stock){  
+  cum_demand = cumsum(rpois(7, lambda))
+  test = ifelse(cum_demand <= stock, 0, 1)
 }
 
-# this block simulates the weekly demand 100 times and computes the probability of meeting the demand.
-# 100 can be relplaced with N.
-sim_demand = ddply(.data=stock, 1, .fun=function(x) { 
-  sim_result = sum(replicate(100, weekly_demand(x$meanDemand, x$InStock)))/100
+# test stub
+sim_result = replicate(10, daily_demand(1, 3))
+sim_result
+rowSums(sim_result)
+rowSums(sim_result)/10
+
+# This block simulates the weekly demand N times and computes the probability of meeting the demand
+# for each day.
+# Result is a data frame with Stock information, and probability of running out of stock for each
+# day of the week.
+#
+N = 10000
+result = ddply(.data=stock, 1, .fun=function(x) { 
+  N_weeks = replicate(N, daily_demand(x$meanDemand, x$InStock))
+  p = rowSums(N_weeks)/N
   data.frame(
     x,
-    Sim = sim_result
+    P1=p[1],
+    P2=p[2],
+    P3=p[3],
+    P4=p[4],
+    P5=p[5],
+    P6=p[6],
+    P7=p[7]
   )
 })
-head(sim_demand)
+head(result)
 
-
-
-
-### -- James addition, part 4
-
-part4 <- raw2[raw2$Date != '2014-04-08' & raw2$Date != '2014-04-21', ]
-oneDay <- 0;
-twoDays <- 0;
-for (i in 1:nrow(part4)) {
-  if (part4[i,]$InTransit != 0) {
-    if (part4[i,]$InTransit == part4[i+1,]$InTransit) { 
-      twoDays <- twoDays + 1;
-    } 
-    else { 
-      oneDay <- oneDay + 1;
-    }
-  }
-}
-
-# 217 one day InTransit; 77 two day InTransit
-oneDay
-TwoDays
-
-# Note, however, that out of those 77, some of them are two seperate shipments while some of them
-# are one shipment taking two days. I do not see a clear way of differentiating these situations
-#
-#part4[3121:3123,]
-#Date Center Store         Product InTransit AtCenter OnOrder InStock          StoreProduct Demand
-#3712 2014-04-09    103 11575 102307200032368        15        0       0       5 11575 102307200032368      0
-#3713 2014-04-10    103 11575 102307200032368        15        0       0       5 11575 102307200032368     15
-#3714 2014-04-11    103 11575 102307200032368         0        0      29      20 11575 102307200032368      0
-#
-#part4[2599:2602,]
-#Date Center Store         Product InTransit AtCenter OnOrder InStock          StoreProduct Demand
-#3060 2014-04-15    103 11407 102307200030160         0        6       0       7 11407 102307200030160      2
-#3061 2014-04-16    103 11407 102307200030160         6        6       0       7 11407 102307200030160      0
-#3062 2014-04-17    103 11407 102307200030160         6        0       0      11 11407 102307200030160      2
-#3063 2014-04-18    103 11407 102307200030160         0        0       0      15 11407 102307200030160      2
-
+# Probability First Day
+result[result$P1 > 0,]
+# Probability Second Day
+result[result$P2 > 0,]
