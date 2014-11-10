@@ -2,7 +2,7 @@
 #Brian Chu, Rohan Fray, Sharad Gurung, James Quacinella
 
 #setwd("C:/Users/sgurung/Documents/GitHub/IS606_Collab_2")
-setwd("~/Code/Masters/IS606/Collab2")
+#setwd("~/Code/Masters/IS606/Collab2")
 
 raw <- read.csv("group-project-2-raw-data.csv")
 raw$Store <- as.factor(as.character(raw$Store))
@@ -72,10 +72,6 @@ stock = stock[, c('StoreProduct', 'InStock','meanDemand')]
 head(stock)
 
 
-#
-# New Code Follows
-#
-
 # This function will simulate a weekly demand and check if the demand is met by product in stock
 # for each day of the week.
 # Returns: a vector of length 7 (week) that contains 0 if demand was met and 1 otherwise.
@@ -123,3 +119,39 @@ secondDayResults[with(secondDayResults, order(-P2)), ]
 
 # Print total results sorted by P1
 print(result[with(result, order(-P1)), c('StoreProduct', 'P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7')], row.names = FALSE)
+
+
+
+### Part 4
+
+part4 <- raw3[raw3$Date != '2014-04-08' & raw3$Date != '2014-04-21', ]
+oneDay <- 0;
+twoDays <- 0;
+threeDays <- 0;
+for (i in 1:nrow(part4)) {
+  if (part4[i,]$InTransit != 0) {
+    if (part4[i,]$InTransit == part4[i+1,]$InTransit && part4[i,]$InTransit == part4[i+2,]$InTransit) {
+      threeDays <- threeDays + 1;      
+    }
+    else if (part4[i,]$InTransit == part4[i+1,]$InTransit) { 
+      twoDays <- twoDays + 1;
+    } 
+    else { 
+      oneDay <- oneDay + 1;
+    }
+  }
+}
+totalTransits = oneDay + twoDays + threeDays;
+cat("Percentage of transit times that are one day: ", (oneDay / totalTransits)*100);
+cat("Percentage of transit times that are at most two day: ", ((oneDay + twoDays) / totalTransits)*100);
+
+#twoDays
+#threeDays
+
+result$StoreProduct <- reorder(result$StoreProduct, result$P2)
+ggplot(result[result$P2 > .01, ],aes(StoreProduct,P2)) + 
+  geom_bar(stat="identity") +
+  theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5)) + 
+  ggtitle("Products with > 1% Chance of going out of stock in 48h") + 
+  xlab("Store +  Product") + 
+  ylab("Probability of Running Out of Stock in 48h")
