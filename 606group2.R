@@ -1,4 +1,5 @@
 #IS606 Group Assignment 2
+#Brian Chu, Rohan Fray, Sharad Gurung, James Quacinella
 
 #setwd("C:/Users/sgurung/Documents/GitHub/IS606_Collab_2")
 setwd("~/Code/Masters/IS606/Collab2")
@@ -13,14 +14,14 @@ raw$StoreProduct <- paste(raw$Store, raw$Product)
 raw$StoreProduct <- as.factor(raw$StoreProduct)
 length(unique(raw$StoreProduct))
 
-#remove negative stock store-product combos (potentially bad data?)
+#remove negative stock store-product combos (potentially bad data)
 #5/270 store-product combos removed (70 rows)
 raw[raw$InStock < 0,]
 negStock <- unique(raw[raw$InStock<0,]$StoreProduct)
 negStock <- factor(negStock)
 raw2 <- subset(raw, !(StoreProduct %in% negStock))
 
-#calculate demand as InStock(n-1) - Instock(n) + InTransit(n-1)
+#calculate demand as InStock(n-1) - Instock(n) + InTransit(n-1) [if delivered next day]
 raw2$Demand <- numeric(nrow(raw2))
 raw2[1,]$Demand <- NA
 raw2$OnOrder <- NULL
@@ -28,19 +29,20 @@ for (i in 2:nrow(raw2)) {
   raw2[i,]$Demand <- 
     ifelse(raw2[i-1,]$StoreProduct == raw2[i,]$StoreProduct,
            raw2[i-1,]$InStock # previous day stock
-         + ifelse(            # plus shipment received on current day
-             raw2[i-1,]$InTransit > 0,
-             (raw2[i-1,]$InTransit - raw2[i,]$InTransit + raw2[i-1,]$AtCenter),
+           + ifelse(            # plus shipment received on current day
+             (raw2[i-1,]$InTransit > 0) & ((raw2[i,]$InTransit == 0) | (raw2[i-1,]$InStock < raw2[i,]$InStock)),
+             raw2[i-1,]$InTransit,
              0)
-         - raw2[i,]$InStock   # minus current day stock
-         ,NA)
+           - raw2[i,]$InStock   # minus current day stock
+           ,NA)
 }
+
 head(raw2,100)
 
 #remove negative demand (could be illogical or need to capture center straight to store [i.e. no InTransit])
 #49/265 store-product combos removed (686 rows)
-x <- subset(raw2, Demand<0)
-negDemand <- unique(x$StoreProduct)
+temp <- subset(raw2, Demand<0)
+negDemand <- unique(temp$StoreProduct)
 negDemand <- factor(negDemand)
 negDemand
 raw3 <- subset(raw2, !(StoreProduct %in% negDemand))
@@ -50,8 +52,6 @@ raw3$StoreProduct <- factor(raw3$StoreProduct)
 library(plyr)
 md<- aggregate(raw3$Demand, list(raw3$StoreProduct), mean, na.rm=TRUE)
 colnames(md) <- c("StoreProduct", "meanDemand")
-
-write.csv(md, "meanDemand.csv")
 
 #------------------------
 
